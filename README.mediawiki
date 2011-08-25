@@ -26,3 +26,4 @@ bot.phpは、3分おきにcronで呼ぶようにしています。
 
 ==== その他 ====
 ; bot_single.php: bot.phpを元に作成。single.txtにある内容をツイートさせたいためだけのファイル。
+__NOTOC__
