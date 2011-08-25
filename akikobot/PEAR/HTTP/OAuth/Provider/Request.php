@@ -168,11 +168,10 @@ class HTTP_OAuth_Provider_Request extends HTTP_OAuth_Message
 
             $params = array_merge($params,
                 $this->parseQueryString($this->getPostData()));
-        } else {
-            $this->debug('getting data from GET');
-            $params = array_merge($params,
-                $this->parseQueryString($this->getQueryString()));
         }
+
+        $params = array_merge($params,
+            $this->parseQueryString($this->getQueryString()));
 
         if (empty($params)) {
             throw new HTTP_OAuth_Provider_Exception_InvalidRequest('No oauth ' .
@@ -192,6 +191,12 @@ class HTTP_OAuth_Provider_Request extends HTTP_OAuth_Message
      */
     public function isValidSignature($consumerSecret, $tokenSecret = '')
     {
+        if (!$this->oauth_signature_method) {
+            throw new HTTP_OAuth_Provider_Exception_InvalidRequest(
+                'Missing oauth_signature_method in request'
+            );
+        }
+
         $sign  = HTTP_OAuth_Signature::factory($this->oauth_signature_method);
         $check = $sign->build(
             $this->getRequestMethod(), $this->getUrl(),
@@ -284,8 +289,10 @@ class HTTP_OAuth_Provider_Request extends HTTP_OAuth_Message
      */
     public function getHeader($header)
     {
-        if (array_key_exists($header, $this->headers)) {
-            return $this->headers[$header];
+        foreach ($this->headers as $name => $value) {
+            if (strtolower($header) == strtolower($name)) {
+                return $value;
+            }
         }
 
         return null;
@@ -333,8 +340,8 @@ class HTTP_OAuth_Provider_Request extends HTTP_OAuth_Message
                 continue;
             }
 
-            list($key, $value)     = explode('=', $part);
-            $data[$key] = $value;
+            list($key, $value) = explode('=', $part);
+            $data[$key] = self::urldecode($value);
         }
 
         return $data;

@@ -208,6 +208,16 @@ class HTTP_OAuth_Consumer_Request extends HTTP_OAuth_Message
     public function send()
     {
         $this->buildRequest();
+
+        // Hack for the OAuth's spec + => %20 and HTTP_Request2
+        // HTTP_Request2 uses http_build_query() which does spaces
+        // as '+' and not '%20'
+        if ($this->getMethod() == 'POST') {
+            $body = $this->getHTTPRequest2()->getBody();
+            $body = str_replace('+', '%20', $body);
+            $this->getHTTPRequest2()->setBody($body);
+        }
+
         try {
             $response = $this->getHTTPRequest2()->send();
         } catch (Exception $e) {
@@ -233,9 +243,11 @@ class HTTP_OAuth_Consumer_Request extends HTTP_OAuth_Message
         $this->oauth_timestamp = time();
         $this->oauth_nonce     = md5(microtime(true) . rand(1, 999));
         $this->oauth_version   = '1.0';
+        $params                = array_merge($this->getParameters(),
+                                             $this->getUrl()->getQueryVariables());
         $this->oauth_signature = $sig->build($this->getMethod(),
                                              $this->getUrl()->getURL(),
-                                             $this->getParameters(),
+                                             $params,
                                              $this->secrets[0],
                                              $this->secrets[1]);
 
@@ -256,7 +268,6 @@ class HTTP_OAuth_Consumer_Request extends HTTP_OAuth_Message
 
         switch ($this->getMethod()) {
         case 'POST':
-            $this->setHeader('Content-Type', 'application/x-www-form-urlencoded');
             foreach ($this->getParameters() as $name => $value) {
                 if (substr($name, 0, 6) == 'oauth_') {
                     continue;
